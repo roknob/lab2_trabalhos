@@ -4,14 +4,14 @@
 #include <string.h>
 #include <time.h>
 
+#define posicoes_ataque_dia 13
+#define posicoes_ataque_noite 8
+
 //struct de um ataque
 typedef struct {
     bool posicao_vazia;
     char ataque_ativo;
 } ataque_t;
-
-#define posicoes_ataque_dia 13
-#define posicoes_ataque_noite 8
 
 //struct de estado com tudo que sera preciso para o jogo
 typedef struct {
@@ -118,6 +118,122 @@ char lechar()
     char c;
     if (fread(&c, 1, 1, stdin) == 1) return c;
     return 0;
+}
+
+//finaliza o jogo
+void termina_jogo(estado_t *est){
+    est->terminou_jogo=true;
+    est->terminou_partida=true;
+    est->terminou_onda=true;
+}
+
+//ve qual a arma ta e aletera a arma pra proxima na sequencia
+void altera_arma(estado_t *est){
+    char armas_dia[]="0123456789N";
+    char armas_noite[]="02468N";
+    char *turno_armas;
+    int qtd_turno_armas;
+    if (est->turno_dia==true){
+        turno_armas=armas_dia;
+        qtd_turno_armas=strlen(armas_dia);
+    } else {
+        turno_armas=armas_noite;
+        qtd_turno_armas=strlen(armas_noite);
+    }
+    int posicao_atual_arma;
+    for(int i=0; i<qtd_turno_armas; i++){
+        if (turno_armas[i]==est->arma_atual){
+            posicao_atual_arma=i;
+        }
+    }
+    int proxima_posicao_arma=posicao_atual_arma+1;
+    if(proxima_posicao_arma==qtd_turno_armas){
+        proxima_posicao_arma=0;
+    }
+    est->arma_atual=turno_armas[proxima_posicao_arma];
+}
+
+//funcao que sorteia os ataques
+char sorteia_ataque (estado_t *est){
+    char armas_dia[]="0123456789N";
+    char armas_noite[]="02468N";
+    char *turno_armas;
+    int qtd_turno_armas;
+    if (est->turno_dia==true){
+        turno_armas=armas_dia;
+        qtd_turno_armas=strlen(armas_dia);
+    } else {
+        turno_armas=armas_noite;
+        qtd_turno_armas=strlen(armas_noite);
+    }
+    int indice_sorteio_arma = rand() % qtd_turno_armas;
+    char resultado_sorteio_arma=turno_armas[indice_sorteio_arma];
+    return resultado_sorteio_arma;
+}
+
+//funcao que gera os inimigos
+void gera_inimigos(estado_t *est){
+    int posicao_turno;
+    if(est->turno_dia==true){
+        posicao_turno=posicoes_ataque_dia-1;
+    } else {
+        posicao_turno=posicoes_ataque_noite-1;
+    }
+    est->lista_ataques[posicao_turno].ataque_ativo=sorteia_ataque(est);
+    est->lista_ataques[posicao_turno].posicao_vazia=false;
+    est->inimigos_ativos++;
+    est->inimigos_inativos--;
+}
+
+//funcao de verificar o inimigo
+int verifica_inimigo(estado_t *est){
+    int indice_alvo = -1;
+    if(est->tiros!=0){
+        for(int i=0; i<posicoes_ataque_dia; i++){
+            if((!est->lista_ataques[i].posicao_vazia && est->lista_ataques[i].ataque_ativo==est->arma_atual)
+                || (!est->lista_ataques[i].posicao_vazia && est->arma_atual=='n'&& est->lista_ataques[i].ataque_ativo=='N')){
+                indice_alvo=i;
+                break;
+            }
+        }
+        est->tiros--;
+    }
+    return indice_alvo;
+}
+
+void calcula_pontos_tiros(estado_t *est, int indice_alvo){
+    if(est->turno_dia==true){
+        if(est->lista_ataques[indice_alvo].ataque_ativo=='n'){
+            est->pontos_onda+=(posicoes_ataque_dia-indice_alvo)*2;
+        } else {
+            est->pontos_onda+=posicoes_ataque_dia-indice_alvo;
+        }
+    } else {
+        if(est->lista_ataques[indice_alvo].ataque_ativo=='n'){
+            est->pontos_onda+=(posicoes_ataque_noite-indice_alvo)*4;
+        } else {
+            est->pontos_onda+=(posicoes_ataque_noite-indice_alvo)*2;
+        }
+    }
+}
+
+void destroi_inimigo(estado_t *est, int indice_alvo){
+    if(indice_alvo!=-1){
+        if(est->lista_ataques[indice_alvo].ataque_ativo==est->arma_atual){
+            est->lista_ataques[indice_alvo].posicao_vazia=true;
+            calcula_pontos_tiros(est, indice_alvo);
+            est->lista_ataques[indice_alvo].ataque_ativo='\0';
+        } else {
+            if(est->arma_atual=='n'&& est->lista_ataques[indice_alvo].ataque_ativo=='N'){
+            est->lista_ataques[indice_alvo].ataque_ativo='n';
+            }
+        }
+    }
+}
+
+void atira(estado_t *est){
+    int indice_alvo = verifica_inimigo(est);
+    destroi_inimigo(est, indice_alvo);
 }
 
 //chama a funcao conforme a tecla que foi pressionada
