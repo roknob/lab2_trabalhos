@@ -4,8 +4,12 @@
 #include <string.h>
 #include <time.h>
 
+#define _POSIX_C_SOURCE 199309L
 #define posicoes_ataque_dia 13
 #define posicoes_ataque_noite 8
+
+// implementação de um cronômetro
+typedef struct timespec crono;
 
 //struct de um ataque
 typedef struct {
@@ -29,6 +33,8 @@ typedef struct {
     int inimigos_inativos;
     int inimigos_derrotados;
     ataque_t lista_ataques[posicoes_ataque_dia];
+    crono cronometro;
+    double tempo_movimento;
 } estado_t;
 
 //funcao que inicia o jogo
@@ -50,6 +56,24 @@ void inicializa_estado(estado_t *est){
         est->lista_ataques[i].posicao_vazia=true;
         est->lista_ataques[i].ataque_ativo='\0';
     }
+    est->tempo_movimento=2.0;
+}
+
+// inicializa um cronômetro com a hora atual
+void crono_inicia(crono *c)
+{
+    clock_gettime(CLOCK_MONOTONIC, c);
+}
+
+// retorna o tempo passado desde que o cronômetro *c foi iniciado, em segundos
+double crono_parcial(crono *c)
+{
+    crono agora;
+    clock_gettime(CLOCK_MONOTONIC, &agora);
+
+    double segundos = agora.tv_sec - c->tv_sec;
+    double nanosegundos = agora.tv_nsec - c->tv_nsec;
+    return segundos + 1e-9 * nanosegundos;
 }
 
 //funcao que inicia onda de dia
@@ -80,6 +104,17 @@ void inicializa_onda_noite(estado_t *est){
     }
 }
 
+//funcao par calcular o tempo de movimentacao apar cada onda;
+void tempo_movimentacao(estado_t *est){
+    est->tempo_movimento = 2.0;
+    for(int i = 1; i<est->fase_onda; i++){
+        est->tempo_movimento = est->tempo_movimento *0.9;
+    }
+    if(est->turno_dia==false){
+        est->tempo_movimento = est->tempo_movimento * 3;
+    }
+}
+
 //funcao pra decidir o turno entre dia e noite
 void sorteia_turno(estado_t *est){
     int chance_dia;
@@ -101,9 +136,12 @@ void inicializa_onda(estado_t *est){
     est->terminou_onda=false;
     est->pontos_onda=0;
     est->arma_atual='0';
+    crono_inicia(&est->cronometro);
     sorteia_turno(est);
+    tempo_movimentacao(est);
     if(est->turno_dia==true){
         inicializa_onda_dia(est);
+
     } else {
         inicializa_onda_noite(est);
     }
@@ -258,9 +296,52 @@ void processa_teclado(estado_t *est){
     }
 }
 
+//funcao que move o inimigo
+//se houver algum ataque inimigo ativo, ele é movido para a esquerda, e
+//caso um ataque colida com um escudo, tanto o escudo quando o ataque são destruídos
+//caso um ataque colida com a base (a arma do jogador), o jogo termina
+void move_inimigo(estado_t *est){
+    if (est->inimigos_ativos>=1){
+        for(int i=0; i<posicoes_ataque_dia; i++){
+            if(!est->lista_ataques[i].posicao_vazia){
+                if(i==0){
+                    termina_jogo(est);
+                } else if(i-1 < est->escudos){
+                    est->lista_ataques[i].posicao_vazia=true;
+                    est->escudos--;
+                    est->inimigos_ativos--;
+                } else {
+                    est->lista_ataques[i-1].posicao_vazia=est->lista_ataques[i].posicao_vazia;
+                    est->lista_ataques[i].posicao_vazia=true;
+                    est->lista_ataques[i-1].ataque_ativo=est->lista_ataques[i].ataque_ativo;
+                }
+            }
+        }
+    }        
+}
+
+//se ainda houver algum ataque não ativo na onda atual, é colocado na última posição dos ataques (mais à direita)
+//se não houver mais ataque, ativo ou não, na onda atual, a onda termina
+void verifica_ataque_ativo(estado_t *est){
+    if (est->inimigos_inativos>0){
+        gera_inimigos(est);
+    } else if (est->inimigos_ativos==0) {
+        est->terminou_onda=true;
+    }
+}
+
+//funcao que processa o tempo
+void processa_tempo(estado_t *est){
+    if(crono_parcial(&est->cronometro)>=est->tempo_movimento){
+        crono_inicia(&est->cronometro);
+        move_inimigo(est);
+        verifica_ataque_ativo(est);        
+    }
+}
+
 void joga_onda(estado_t *est)
 {
-  //repete enquanto nao terminar a onda
+  while(est->terminou_onda==false)
   {
     processa_teclado(est);
     processa_tempo(est);
