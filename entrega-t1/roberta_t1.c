@@ -613,6 +613,5 @@ int main() {
         finaliza_partida(&estado);
     }
     desinicializa_tela(&estado);
-
     normaliza_terminal();
 }
