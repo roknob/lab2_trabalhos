@@ -37,6 +37,16 @@ typedef struct {
     double tempo_movimento;
 } estado_t;
 
+void atuacao_sonar(estado_t *est){
+    //
+}
+void inicializa_tela(){
+    //
+}
+void desinicializa_tela(){
+    //
+}
+
 //funcao que inicia o jogo
 void inicializa_estado(estado_t *est){
     est->terminou_jogo=false;
@@ -167,8 +177,8 @@ void termina_jogo(estado_t *est){
 
 //ve qual a arma ta e aletera a arma pra proxima na sequencia
 void altera_arma(estado_t *est){
-    char armas_dia[]="0123456789N";
-    char armas_noite[]="02468N";
+    char armas_dia[]="0123456789n";
+    char armas_noite[]="02468n";
     char *turno_armas;
     int qtd_turno_armas;
     if (est->turno_dia==true){
@@ -285,7 +295,7 @@ void processa_teclado(estado_t *est){
     case '\t':
         altera_arma(est);
         break;
-    case '\n':
+    case '\r':
         atira(est);
         break;
     case ' ':
@@ -306,10 +316,11 @@ void move_inimigo(estado_t *est){
             if(!est->lista_ataques[i].posicao_vazia){
                 if(i==0){
                     termina_jogo(est);
+                    break;
                 } else if(i-1 < est->escudos){
-                    est->lista_ataques[i].posicao_vazia=true;
-                    est->escudos--;
                     est->inimigos_ativos--;
+                    est->escudos--;
+                    est->lista_ataques[i].posicao_vazia=true;
                 } else {
                     est->lista_ataques[i-1].posicao_vazia=est->lista_ataques[i].posicao_vazia;
                     est->lista_ataques[i].posicao_vazia=true;
@@ -335,7 +346,37 @@ void processa_tempo(estado_t *est){
     if(crono_parcial(&est->cronometro)>=est->tempo_movimento){
         crono_inicia(&est->cronometro);
         move_inimigo(est);
-        verifica_ataque_ativo(est);        
+        if(!est->terminou_jogo){
+            verifica_ataque_ativo(est);
+        }        
+    }
+}
+
+//funcao que apresenta na tela o jogo
+void apresenta(estado_t *est){
+    if (est->turno_dia==false){
+        printf("%8d \r", est->pontos_onda);
+    } else {
+        printf("%8d ", est->pontos_onda);
+        printf("%2d ", est->tiros);
+        printf("%c", est->arma_atual);
+        for(int i=0; i<3; i++){
+            if(i < est->escudos){
+                printf(")");
+            } else if (est->lista_ataques[i].posicao_vazia==false) {
+                printf("%c", est->lista_ataques[i].ataque_ativo);
+            } else {
+                printf(" ");
+            }
+        }
+        for(int j=3; j<posicoes_ataque_dia; j++){
+            if(est->lista_ataques[j].posicao_vazia==true){
+                printf(" ");
+            } else {
+                printf("%c", est->lista_ataques[j].ataque_ativo);
+            }
+        }
+        printf("\r");
     }
 }
 
