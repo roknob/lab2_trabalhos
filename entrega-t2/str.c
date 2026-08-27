@@ -9,7 +9,9 @@
 #define MIN_ALLOC 8    // alocação mínima
 
 struct str {
-  // ...
+  byte *bytes;
+  int qtd_bytes_usados;
+  int capacidade_bytes;
 };
 
 // A memória para conter os bytes de uma string deve ser alocada e/ou
@@ -28,6 +30,11 @@ struct str {
 // aborta o programa se não tiver
 static void s_ok(Str_c s)
 {
+  assert(s->bytes !=NULL || (s->capacidade_bytes==0 && s->qtd_bytes_usados==0));
+  assert(s->capacidade_bytes<s->capacidade_bytes);
+  assert(s->capacidade_bytes<MIN_ALLOC);
+  assert(s->qtd_bytes_usados<s->capacidade_bytes*3);
+  assert(s->capacidade_bytes/2!=0);
 }
 
 //...
