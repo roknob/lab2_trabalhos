@@ -42,18 +42,45 @@ static void s_ok(Str_c s)
 
 // operações de criação e destruição {{{1
 
+static void s_vazia(Str s){
+  s->bytes = 0;
+  s->capacidade_bytes = 0;
+  s->qtd_bytes_usados = 0;
+}
+
+static int calcula_alocacao(int bytes_necessarios){
+  int resultado_alocacao = MIN_ALLOC;
+  while (resultado_alocacao < bytes_necessarios){
+    resultado_alocacao *= 2;
+  }
+  return resultado_alocacao;
+} 
+
 Str s_cria(char const *strC)
 {
   Str s = malloc(sizeof(*s));
   assert(s != NULL);
-  //...
+  s_vazia(s);
+  int numbytes;
+  if(strC==NULL){
+    return s;
+  } else {
+    numbytes = strlen(strC);
+  }
+  if(u8_conta_unichar_nos_bytes(numbytes, (byte*) strC) != -1 && numbytes > 0){
+    s->qtd_bytes_usados = numbytes;
+    s->capacidade_bytes = calcula_alocacao(numbytes);
+    s->bytes = malloc(s->capacidade_bytes);
+    assert(s->bytes != NULL);
+    memcpy(s->bytes, strC, numbytes);
+  }
   return s;
 }
 
 void s_destroi(Str s)
 {
   s_ok(s);
-  //...
+  free(s->bytes);
   free(s);
 }
 
@@ -74,7 +101,26 @@ Str s_cria_cópia(Str_c s)
 Str s_cria_de_arquivo(char *nome)
 {
   Str s = s_cria("");
-  //...
+  FILE *arq = fopen(nome, "r");
+  int tam_arq;
+  if(arq==NULL){
+    return s;
+  } else {
+    fseek(arq, 0, SEEK_END);
+    tam_arq = ftell(arq);
+    fseek(arq, 0, SEEK_SET);
+    byte *temp = malloc(tam_arq);
+    fread(temp, 1, tam_arq, arq);
+    if(u8_conta_unichar_nos_bytes(tam_arq, (byte*) temp) != -1 && tam_arq > 0){
+      s->qtd_bytes_usados = tam_arq;
+      s->capacidade_bytes = calcula_alocacao(tam_arq);
+      s->bytes = malloc(s->capacidade_bytes);
+      assert(s->bytes != NULL);
+      memcpy(s->bytes, temp, tam_arq);
+    }
+    free(temp);
+    fclose(arq);
+  }
   return s;
 }
 
@@ -83,8 +129,9 @@ Str s_cria_de_arquivo(char *nome)
 int s_tam(Str_c s)
 {
   s_ok(s);
-  //...
-  return 0;
+  int tam = u8_conta_unichar_nos_bytes(s->qtd_bytes_usados, s->bytes);
+  assert(tam != -1);
+  return tam;
 }
 
 char *s_strc(Str_c s)
