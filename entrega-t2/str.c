@@ -8,7 +8,8 @@
 
 #define MIN_ALLOC 8    // alocação mínima
 
-struct str {
+struct str
+{
   byte *bytes;
   int qtd_bytes_usados;
   int capacidade_bytes;
@@ -42,13 +43,15 @@ static void s_ok(Str_c s)
 
 // operações de criação e destruição {{{1
 
-static void s_vazia(Str s){
+static void s_vazia(Str s)
+{
   s->bytes = 0;
   s->capacidade_bytes = 0;
   s->qtd_bytes_usados = 0;
 }
 
-static int calcula_alocacao(int bytes_necessarios){
+static int calcula_alocacao(int bytes_necessarios)
+{
   int resultado_alocacao = MIN_ALLOC;
   while (resultado_alocacao < bytes_necessarios){
     resultado_alocacao *= 2;
@@ -137,15 +140,25 @@ int s_tam(Str_c s)
 char *s_strc(Str_c s)
 {
   s_ok(s);
-  //...
-  return NULL;
+  char *copia = malloc(s->qtd_bytes_usados+1);
+  assert(copia != NULL);
+  memcpy(copia, s->bytes, s->qtd_bytes_usados);
+  copia[s->qtd_bytes_usados] = '\0';
+  return copia;
 }
 
 unichar s_ch(Str_c s, int pos)
 {
   s_ok(s);
-  //...
-  return UNI_INV;
+  byte *pos_s;
+  if(pos>=0 && pos<s_tam(s)) {
+    pos_s = u8_avanca_unichar(s->bytes, pos);
+    unichar cod_unicode;
+    u8_unichar_nos_bytes(s->qtd_bytes_usados, pos_s, &cod_unicode);
+    return cod_unicode;
+  } else {
+    return UNI_INV;
+  }
 }
 
 
@@ -155,7 +168,28 @@ bool s_igual(Str_c s, Str_c sb)
 {
   s_ok(s);
   s_ok(sb);
-  //...
+  if(s->qtd_bytes_usados == sb->qtd_bytes_usados && memcmp(s->bytes, sb->bytes, s->qtd_bytes_usados) == 0){
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static int pos_busca(Str_c s, int pos)
+{
+  if (pos < 0){
+    pos = s_tam(s) + 1 + pos;
+  }
+  return pos;
+}
+
+static bool char_igual_busca(Str_c sb, unichar c)
+{
+  for(int i=0; i<s_tam(sb); i++){
+    if (s_ch(sb, i) == c) {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -163,7 +197,16 @@ int s_busca_c(Str_c s, int pos, Str_c sb)
 {
   s_ok(s);
   s_ok(sb);
-  //...
+  pos = pos_busca(s, pos);
+  if (pos < 0){
+    pos = 0;
+  }
+  for(int i = pos; i < s_tam(s); i++){
+    unichar c = s_ch(s, i);
+    if (char_igual_busca(sb, c)){
+      return i;
+    }
+  }
   return -1;
 }
 
@@ -171,7 +214,16 @@ int s_busca_nc(Str_c s, int pos, Str_c sb)
 {
   s_ok(s);
   s_ok(sb);
-  //...
+  pos = pos_busca(s, pos);
+  if (pos < 0){
+    pos = 0;
+  }
+  for(int i = pos; i < s_tam(s); i++){
+    unichar c = s_ch(s, i);
+    if (!char_igual_busca(sb, c)){
+      return i;
+    }
+  }
   return -1;
 }
 
@@ -179,7 +231,16 @@ int s_busca_rc(Str_c s, int pos, Str_c sb)
 {
   s_ok(s);
   s_ok(sb);
-  //...
+  pos = pos_busca(s, pos);
+  if (pos > s_tam(s)){
+    pos = s_tam(s);
+  }
+  for(int i = pos-1; i >= 0; i--){
+    unichar c = s_ch(s, i);
+    if (char_igual_busca(sb, c)){
+      return i;
+    }
+  }
   return -1;
 }
 
@@ -187,15 +248,46 @@ int s_busca_rnc(Str_c s, int pos, Str_c sb)
 {
   s_ok(s);
   s_ok(sb);
-  //...
+  pos = pos_busca(s, pos);
+  if (pos > s_tam(s)){
+    pos = s_tam(s);
+  }
+  for(int i = pos-1; i >= 0; i--){
+    unichar c = s_ch(s, i);
+    if (!char_igual_busca(sb, c)){
+      return i;
+    }
+  }
   return -1;
+}
+
+static bool substring_igual_busca(Str_c s, int i, Str_c buscada)
+{
+  for(int j=0; j<s_tam(buscada); j++){
+    if(s_ch(s, i+j) != s_ch(buscada, j)){
+      return false;
+    }
+  }
+  return true;
 }
 
 int s_busca_s(Str_c s, int pos, Str_c buscada)
 {
   s_ok(s);
   s_ok(buscada);
-  //...
+  pos = pos_busca(s, pos);
+  if (pos < 0){
+    pos = 0;
+  }
+  if(s_tam(buscada) == 0){
+    return pos;
+  } else {
+    for(int i = pos; i < s_tam(s); i++){
+      if (substring_igual_busca(s, i, buscada)){
+        return i;
+      }
+    }
+  }
   return -1;
 }
 
