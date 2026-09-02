@@ -37,8 +37,8 @@ static void s_ok(Str_c s)
   assert(s->capacidade_bytes == 0 || s->capacidade_bytes >= MIN_ALLOC);
   assert(s->capacidade_bytes == 0 || s->capacidade_bytes <= s->qtd_bytes_usados * 3
         || s->capacidade_bytes == MIN_ALLOC);
-  assert(s->capacidade_bytes == 0 || s->capacidade_bytes > 0
-        && (s->capacidade_bytes & (s->capacidade_bytes - 1)) == 0);
+  assert(s->capacidade_bytes == 0 || (s->capacidade_bytes > 0
+        && (s->capacidade_bytes & (s->capacidade_bytes - 1)) == 0));
 }
 
 // operações de criação e destruição {{{1
@@ -142,7 +142,9 @@ char *s_strc(Str_c s)
   s_ok(s);
   char *copia = malloc(s->qtd_bytes_usados+1);
   assert(copia != NULL);
-  memcpy(copia, s->bytes, s->qtd_bytes_usados);
+  if(s->qtd_bytes_usados > 0) {
+    memcpy(copia, s->bytes, s->qtd_bytes_usados);
+  }
   copia[s->qtd_bytes_usados] = '\0';
   return copia;
 }
@@ -168,7 +170,8 @@ bool s_igual(Str_c s, Str_c sb)
 {
   s_ok(s);
   s_ok(sb);
-  if(s->qtd_bytes_usados == sb->qtd_bytes_usados && memcmp(s->bytes, sb->bytes, s->qtd_bytes_usados) == 0) {
+  if(s->qtd_bytes_usados == sb->qtd_bytes_usados &&
+    (s->qtd_bytes_usados == 0 || memcmp(s->bytes, sb->bytes, s->qtd_bytes_usados) == 0)) {
     return true;
   } else {
     return false;
@@ -291,23 +294,29 @@ int s_busca_s(Str_c s, int pos, Str_c buscada)
   return -1;
 }
 
-static void verifica_posicao_substitui (Str s, int *pos, int *tam, Str_c sb)
+static void verifica_posicao_substitui (Str s, int *pos, int *tam)
 {
-  *pos = pos_busca(s, *pos);
-  if(*pos < 0) {
-    *pos = 0;
-  } else if(*pos > s_tam(s)) {
-    *pos = s_tam(s);
+  int tam_s = s_tam(s);
+  int p = pos_busca(s, *pos);
+  int fim = (*tam < 0) ? tam_s : (p + *tam);
+  if(p < 0) {
+    p = 0;
+  } else if(p > tam_s) {
+    p = tam_s;
   }
-  if(*tam < 0) {
-    *tam = s_tam(s) - *pos;
+  if(fim < 0) {
+    fim = 0;
+  } else if(fim > tam_s) {
+    fim = tam_s;
   }
-  if(*pos + *tam > s_tam(s)) {
-    *tam = s_tam(s) - *pos;
+  if(fim < p) {
+    fim = p;
   }
+  *pos = p;
+  *tam = fim - p;
 }
 
-static int qtd_bytes_substitui(Str s, int pos, int tam, Str_c sb)
+static int qtd_bytes_substitui(Str_c sb)
 {
   int qtd_bytes_sb;
   if(sb == NULL){
@@ -338,13 +347,13 @@ void s_substitui(Str s, int pos, int tam, Str_c sb)
     s_ok(sb);
   }
   int qtd_bytes_pre_substitui = s->qtd_bytes_usados;
-  verifica_posicao_substitui(s, &pos, &tam, sb);
+  verifica_posicao_substitui(s, &pos, &tam);
   byte *p_pos_inicio = u8_avanca_unichar(s->bytes, pos);
   int deslocamento_pos_i = p_pos_inicio - s->bytes;
   byte *p_pos_fim = u8_avanca_unichar(s->bytes, pos + tam);
   int deslocamento_pos_f = p_pos_fim - s->bytes;
   int qtd_bytes_remover = deslocamento_pos_f - deslocamento_pos_i;
-  int qtd_bytes_sb = qtd_bytes_substitui(s, pos, tam, sb);
+  int qtd_bytes_sb = qtd_bytes_substitui(sb);
   int qtd_bytes_atualizada = qtd_bytes_pre_substitui - qtd_bytes_remover + qtd_bytes_sb;
   int alocacao_atualizada = calcula_alocacao(qtd_bytes_atualizada);
   atualiza_alocacao(s, qtd_bytes_atualizada, alocacao_atualizada);
@@ -352,7 +361,7 @@ void s_substitui(Str s, int pos, int tam, Str_c sb)
     int qtd_bytes_apos = qtd_bytes_pre_substitui - deslocamento_pos_f;
     int destino_apos = deslocamento_pos_i + qtd_bytes_sb;
     memmove(s->bytes + destino_apos, s->bytes + deslocamento_pos_f, qtd_bytes_apos);
-    if(sb != NULL) {
+    if(sb != NULL && qtd_bytes_sb > 0) {
       memcpy(s->bytes + deslocamento_pos_i, sb->bytes, qtd_bytes_sb);
     }
     s->qtd_bytes_usados = qtd_bytes_atualizada;
@@ -361,18 +370,24 @@ void s_substitui(Str s, int pos, int tam, Str_c sb)
 
 static void verifica_posicao_substring(Str_c sb, int *pos, int *tam)
 {
-  *pos = pos_busca(sb, *pos);
-  if(*pos < 0){
-    *pos = 0;
-  } else if(*pos > s_tam(sb)) {
-    *pos = s_tam(sb);
+  int tam_sb = s_tam(sb);
+  int p = pos_busca(sb, *pos);
+  int fim = (*tam < 0) ? tam_sb : (p + *tam);
+  if(p < 0) {
+    p = 0;
+  } else if(p > tam_sb) {
+    p = tam_sb;
   }
-  if(*tam < 0) {
-    *tam = s_tam(sb) - *pos;
+  if(fim < 0) {
+    fim = 0;
+  } else if(fim > tam_sb) {
+    fim = tam_sb;
   }
-  if(*pos + *tam > s_tam(sb)) {
-    *tam = s_tam(sb) - *pos;
+  if(fim < p) {
+    fim = p;
   }
+  *pos = p;
+  *tam = fim - p;
 } 
 
 void s_substring(Str s, Str_c sb, int pos, int tam)
