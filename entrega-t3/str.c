@@ -80,7 +80,6 @@ Str s_cria(char const *strC)
   return s;
 }
 
-// Aloca, inicializa e retorna uma nova string, contendo a representação decimal de num
 Str s_cria_número(double num)
 {
   char buffer[32];
@@ -181,6 +180,14 @@ unichar s_ch(Str_c s, int pos)
   }
 }
 
+double s_número(Str_c s)
+{
+  char *num = s_strc(s);
+  double s_num;
+  sscanf(num, "%lf", &s_num);
+  free(num);
+  return s_num;
+}
 
 // operações de busca e comparação {{{1
 
@@ -454,6 +461,18 @@ void s_insere_c(Str s, int pos, unichar c)
 void s_anexa(Str s, Str_c sb)
 {
   s_substitui(s, -1, 0, sb);
+}
+
+Str s_cria_unindo(Lista l, Str sep)
+{
+  Str concatena = s_cria("");
+  for(int i = 0; i < l_tam(l); i++){
+    if(i>0){
+      s_anexa(concatena, sep);
+    }
+    s_anexa(concatena, l_dado_pos(l, i));
+  }
+  return concatena;
 }
 
 void s_anexa_c(Str s, unichar c)
