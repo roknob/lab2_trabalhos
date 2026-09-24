@@ -56,7 +56,25 @@ Lista l_cria()
 //   "aba \ncate\n", "\n" -> ["aba " "cate"]
 Lista l_cria_separando(Str s, Str sep)
 {
-  //
+  Lista nova_lista = l_cria();
+  int pos = 0;
+  int tam = 0;
+  while(pos >= 0){
+    int inicio = s_busca_nc(s, pos, sep);
+    if(inicio == -1){
+      break;
+    }
+    int fim = s_busca_c(s, inicio, sep);
+    if(fim == -1){
+      tam = -1;
+    } else {
+      tam = fim - inicio;
+    }
+    Str nova_substring = s_cria_substring(s, inicio, tam);
+    l_insere_fim(nova_lista, nova_substring);
+    pos = fim;
+  }
+  return nova_lista;
 }
 
 // libera a memória ocupada por uma lista
