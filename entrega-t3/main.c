@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-  if (argc != 3) {
+  if(argc != 3){
     printf("uso: %s entrada.txt saida.txt\n", argv[0]);
     return 1;
   }
@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
   Str sep = s_cria("\n");
   Lista linhas = l_cria_separando(conteudo, sep);
   Lista saida = l_cria();
-  for (int i = 0; i < l_tam(linhas); i++) {
+  for(int i = 0; i < l_tam(linhas); i++){
     Str linha = l_dado_pos(linhas, i);
     Str resultado = calculadora(linha);
     l_insere_fim(saida, resultado);

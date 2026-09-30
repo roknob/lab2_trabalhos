@@ -54,7 +54,7 @@ static bool verifica_espaço(unichar c)
 
 static int pula_espacos(Str txt, int pos)
 {
-  while (verifica_espaço(s_ch(txt, pos))) {
+  while(verifica_espaço(s_ch(txt, pos))){
     pos++;
   }
   return pos;
@@ -118,8 +118,7 @@ static int categoria_operador_pilha(Str operador)
     return 0;
   }
   unichar c = s_ch(operador, 0);
-  switch (c)
-  {
+  switch (c){
     case '+':
     case '-':
       return 1;
@@ -143,8 +142,7 @@ static int categoria_operador_entrada(Str operador)
     return 0;
   }
   unichar c = s_ch(operador, 0);
-  switch (c)
-  {
+  switch (c){
     case '+':
     case '-':
       return 1;
@@ -166,7 +164,7 @@ static int categoria_operador_entrada(Str operador)
 
 static Str obtem_p(Lista operadores)
 {
-  if(l_vazia(operadores)) {
+  if(l_vazia(operadores)){
     return NULL;
   }
   return l_topo(operadores);
@@ -359,7 +357,7 @@ static Str monta_resultado(Dicionário variáveis, Lista tokens, Lista operandos
   Str resultado;
   if(resultado_erro != NULL){
     resultado = resultado_erro;
-  } else if(l_tam(operandos) != 1) {
+  } else if(l_tam(operandos) != 1){
     resultado = define_erro("expressao invalida");
   } else {
     Str operando = l_desempilha(operandos);
