@@ -379,8 +379,6 @@ static Str monta_resultado(Dicionário variáveis, Lista tokens, Lista operandos
   return resultado;
 }
 
-// Calcula o valor de expressão e retorna uma nova Str contendo o resultado.
-// Em cado de erro, os primeiros caracteres da Str de retorno são "#ERRO ".
 static Str calcula_expressao(Calc c, Str expressão)
 {
   Dicionário variáveis = c->variáveis;
