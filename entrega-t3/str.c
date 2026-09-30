@@ -82,18 +82,18 @@ Str s_cria(char const *strC)
 
 Str s_cria_número(double num)
 {
-  char buffer[32];
-  sprintf(buffer, "%f", num);
+  char buffer[400];
+  snprintf(buffer, sizeof(buffer), "%f", num);
   int tam_buffer = strlen(buffer);
   while(buffer[tam_buffer-1] == '0'){
     tam_buffer = tam_buffer - 1;
     buffer[tam_buffer] = '\0';
   }
   if(buffer[tam_buffer-1] == '.'){
-      tam_buffer = tam_buffer - 1;
-      buffer[tam_buffer] = '\0';
+    tam_buffer = tam_buffer - 1;
+    buffer[tam_buffer] = '\0';
   }
-  Str cria_num = (s_cria(buffer));
+  Str cria_num = s_cria(buffer);
   return cria_num;
 }
 
@@ -183,7 +183,7 @@ unichar s_ch(Str_c s, int pos)
 double s_número(Str_c s)
 {
   char *num = s_strc(s);
-  double s_num;
+  double s_num = 0;
   sscanf(num, "%lf", &s_num);
   free(num);
   return s_num;

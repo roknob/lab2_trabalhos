@@ -34,7 +34,6 @@ static void l_ok(Lista l)
   assert(t == l->tamanho);
 }
 
-// cria e inicializa uma lista vazia
 Lista l_cria()
 {
   Lista l = malloc(sizeof(*l));
@@ -48,12 +47,6 @@ Lista l_cria()
   return l;
 }
 
-// cria uma lista contendo substrings de s
-// as substrings são separadas por quaisquer caractere de sep
-// os caracteres de sep não aparecem nas substrings
-// exemplos:
-//   "a,ba,ca, te", ", " -> ["a" "ba" "ca" "te"]
-//   "aba \ncate\n", "\n" -> ["aba " "cate"]
 Lista l_cria_separando(Str s, Str sep)
 {
   Lista nova_lista = l_cria();
@@ -77,7 +70,6 @@ Lista l_cria_separando(Str s, Str sep)
   return nova_lista;
 }
 
-// libera a memória ocupada por uma lista
 void l_destroi(Lista l)
 {
   l_ok(l);
@@ -92,21 +84,18 @@ void l_destroi(Lista l)
   free (l);
 }
 
-// retorna o número de elementos na lista
 int l_tam(Lista l)
 {
   l_ok(l);
   return l->tamanho;
 }
 
-// retorna true se a lista tiver cheia
 bool l_cheia(Lista l)
 {
   l_ok(l);
   return false;
 }
 
-// retorna true se a lista tiver vazia
 bool l_vazia(Lista l)
 {
   l_ok(l);
@@ -117,7 +106,6 @@ bool l_vazia(Lista l)
   }
 }
 
-// imprime os dados que estão na lista
 void l_imprime(Lista l)
 {
   l_ok(l);
@@ -128,7 +116,6 @@ void l_imprime(Lista l)
   printf("]\n");
 }
 
-// insere o dado d no início da lista l
 void l_insere_inicio(Lista l, dado_t d)
 {
   l_ok(l);
@@ -143,7 +130,6 @@ void l_insere_inicio(Lista l, dado_t d)
   l->tamanho++;
 }
 
-// insere o dado d no final da lista l
 void l_insere_fim(Lista l, dado_t d)
 {
   l_ok(l);
@@ -171,8 +157,6 @@ static nó *no_anterior(Lista l, int p){
   return n;
 }
 
-// insere o dado d na lista l, de forma que ele fique na posição p
-// a primeira posição é 0
 void l_insere_pos(Lista l, dado_t d, int p)
 {
   l_ok(l);
@@ -188,7 +172,6 @@ void l_insere_pos(Lista l, dado_t d, int p)
   l->tamanho++;
 }
 
-// retorna o dado no início da lista
 dado_t l_dado_inicio(Lista l)
 {
   l_ok(l);
@@ -196,7 +179,6 @@ dado_t l_dado_inicio(Lista l)
   return l->sentinela->prox->dado;
 }
 
-// retorna o dado no final da lista
 dado_t l_dado_fim(Lista l)
 {
   l_ok(l);
@@ -204,7 +186,6 @@ dado_t l_dado_fim(Lista l)
   return l->sentinela->ant->dado;
 }
 
-// retorna o dado na posição pos da lista
 dado_t l_dado_pos(Lista l, int pos)
 {
   l_ok(l);
@@ -220,10 +201,10 @@ dado_t l_dado_pos(Lista l, int pos)
   return n->dado;
 }
 
-// remove e retorna o dado no início da lista
 dado_t l_remove_inicio(Lista l)
 {
   l_ok(l);
+  assert(!l_vazia(l));
   nó *remover = l->sentinela->prox;
   Str dado_removido = remover->dado;
   nó *seguinte = remover->prox;
@@ -234,10 +215,10 @@ dado_t l_remove_inicio(Lista l)
   return dado_removido;
 }
 
-// remove e retorna o dado no final da lista
 dado_t l_remove_fim(Lista l)
 {
   l_ok(l);
+  assert(!l_vazia(l));
   nó *remover = l->sentinela->ant;
   Str dado_removido = remover->dado;
   nó *anterior = remover->ant;
@@ -248,10 +229,11 @@ dado_t l_remove_fim(Lista l)
   return dado_removido;
 }
 
-// remove e retorna o dado na posição pos da lista
 dado_t l_remove_pos(Lista l, int pos)
 {
   l_ok(l);
+  assert(!l_vazia(l));
+  assert(pos >= 0 && pos < l->tamanho);
   nó *anterior = no_anterior(l, pos);
   nó *remover = anterior->prox;
   Str dado_removido = remover->dado;
@@ -263,47 +245,31 @@ dado_t l_remove_pos(Lista l, int pos)
   return dado_removido;
 }
 
-
-// funções para usar a lista como uma fila
-
-// l_cria, l_destroi, l_vazia
-
-// retorna o dado que está no início da fila
 dado_t l_primeiro(Lista l)
 {
   return l_dado_inicio(l);
 }
 
-// insere um dado no fim da fila
 void l_insere(Lista l, dado_t d)
 {
   l_insere_fim(l, d);
 }
 
-// remove e retorna o dado que está no início da fila
 dado_t l_remove(Lista l)
 {
   return l_remove_inicio(l);
 }
 
-
-// funções para usar a lista como uma pilha
-
-// l_cria, l_destroi, l_vazia
-
-// retorna o dado que está no topo da pilha
 dado_t l_topo(Lista l)
 {
   return l_dado_inicio(l);
 }
 
-// empilha um dado no topo da pilha
 void l_empilha(Lista l, dado_t d)
 {
   l_insere_inicio(l, d);
 }
 
-// remove e retorna o dado que está no topo da pilha
 dado_t l_desempilha(Lista l)
 {
   return l_remove_inicio(l);

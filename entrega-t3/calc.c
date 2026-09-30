@@ -1,13 +1,87 @@
 #include "calc.h"
 #include "dicionario.h"
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 #include <math.h>
 
-typedef enum {
+typedef struct calc *Calc;
+
+struct calc
+{
+  Dicionário variáveis;
+};
+
+static bool igual(chave_t a, chave_t b)
+{
+  Str sa = a;
+  Str sb = b;
+  return s_igual(sa, sb);
+}
+
+static bool menor(chave_t a, chave_t b)
+{
+  (void) a;
+  (void) b;
+  return false;
+}
+
+static Calc calc_cria(void)
+{
+  Calc c = malloc(sizeof(*c));
+  assert(c != NULL);
+  c->variáveis = dic_cria(menor, igual);
+  return c;
+}
+
+static void calc_destroi(Calc c)
+{
+  chave_t chave;
+  valor_t valor;
+  dic_inicia_percurso(c->variáveis);
+  while(dic_próximo(c->variáveis, &chave, &valor)){
+    s_destroi(chave);
+    s_destroi(valor);
+  }
+  dic_destrói(c->variáveis);
+  free(c);
+}
+
+static bool verifica_espaço(unichar c)
+{
+  return c == ' ' || c == '\t' || c == '\n';
+}
+
+static int pula_espacos(Str txt, int pos)
+{
+  while (verifica_espaço(s_ch(txt, pos))) {
+    pos++;
+  }
+  return pos;
+}
+
+static bool verifica_dígito_ou_ponto(unichar c)
+{
+  return c == '.' || (c >= '0' && c <= '9');
+}
+
+static bool verifica_início_de_identificador(unichar c)
+{
+  return c == '$' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static bool verifica_continuação_de_identificador(unichar c)
+{
+  return verifica_início_de_identificador(c) || c == '_' || (c >= '0' && c <= '9');
+}
+
+static bool verificar_operador(unichar c)
+{
+  return c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '(' || c == ')' || c == '=';
+}
+
+typedef enum
+{
   t_operador,
   t_operando,
   t_erro
@@ -16,22 +90,26 @@ typedef enum {
 static tipo_t classifica_token(Str token)
 {
   unichar c = s_ch(token, 0);
-  if(c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '(' || c == ')' || c == '='){
+  if(verificar_operador(c)){
     return t_operador;
   }
-  if((c >='0' && c<='9') || c == '.'){
+  if(verifica_dígito_ou_ponto(c)){
+    return t_operando;
+  }
+  if(verifica_início_de_identificador(c)){
     return t_operando;
   }
   return t_erro;
 }
 
-static char tabela[5][6] = 
+static char tabela[6][7] = 
 {
-  {'T', 'E', 'E', 'E', 'E', 'L'},   // L: falta '('
-  {'O', 'O', 'E', 'E', 'E', 'O'},
-  {'O', 'O', 'O', 'E', 'E', 'O'},
-  {'O', 'O', 'O', 'E', 'E', 'O'},
-  {'R', 'E', 'E', 'E', 'E', 'D'}    // R: falta ')'
+  {'T', 'E', 'E', 'E', 'E', 'L', 'E'},
+  {'O', 'O', 'E', 'E', 'E', 'O', 'E'},
+  {'O', 'O', 'O', 'E', 'E', 'O', 'E'},
+  {'O', 'O', 'O', 'E', 'E', 'O', 'E'},
+  {'R', 'E', 'E', 'E', 'E', 'D', 'E'},
+  {'O', 'E', 'E', 'E', 'E', 'O', 'E'}
 };
 
 static int categoria_operador_pilha(Str operador)
@@ -52,6 +130,8 @@ static int categoria_operador_pilha(Str operador)
       return 3;
     case '(':
       return 4;
+    case '=':
+      return 5;
     default:
       return -1;
   }
@@ -77,6 +157,8 @@ static int categoria_operador_entrada(Str operador)
       return 4;
     case ')':
       return 5;
+    case '=':
+      return 6;
     default:
       return -1;
   }
@@ -112,56 +194,118 @@ static Str define_erro(char *mensagem)
   return mensagem_erro;
 }
 
-static Str acao_opera(Lista operadores, Lista operandos)
+static bool valor_operando(Dicionário variáveis, Str operando, double *valor)
+{
+  unichar c = s_ch(operando, 0);
+  if(verifica_dígito_ou_ponto(c)){
+    *valor = s_número(operando);
+    return true;
+  }
+  valor_t encontrado = dic_busca(variáveis, operando);
+  if(encontrado == VALOR_NÃO_EXISTE){
+    return false;
+  }
+  Str s_valor = encontrado;
+  *valor = s_número(s_valor);
+  return true;
+}
+
+static bool calcula(unichar op, double a, double b, double *resultado)
+{
+  *resultado = 0;
+  switch (op)
+  {
+  case '+':
+    *resultado = a + b;
+    break;
+  case '-':
+    *resultado = a - b;
+    break;
+  case '*':
+    *resultado = a * b;
+    break;
+  case '/':
+    if(b == 0){
+      return false;
+    }
+    *resultado = a / b;
+    break;
+  case '^':
+    *resultado = pow(a, b);
+    break;
+  default:
+    break;
+  }
+  return true;
+}
+
+static Str acao_atribui(Dicionário variáveis, Lista operadores, Lista operandos)
 {
   if(l_tam(operandos) < 2){
     return define_erro("operandos insuficientes");
   }
   Str operador = l_desempilha(operadores);
-  Str s_operando = l_desempilha(operandos);
-  Str p_operando = l_desempilha(operandos);
-  double segundo_operando = s_número(s_operando);
-  double primeiro_operando = s_número(p_operando);
-  double resultado_operandos = 0;
-  Str erro = NULL;
-  unichar c = s_ch(operador, 0);
-  switch (c)
-  {
-  case '+':
-    resultado_operandos = primeiro_operando + segundo_operando;
-    break;
-  case '-':
-    resultado_operandos = primeiro_operando - segundo_operando;
-    break;
-  case '*':
-    resultado_operandos = primeiro_operando * segundo_operando;
-    break;
-  case '/':
-    if(segundo_operando == 0){
-      erro = define_erro("divisao por zero");
-    } else {
-      resultado_operandos = primeiro_operando / segundo_operando;
-    }
-    break;
-  case '^':
-    resultado_operandos = pow(primeiro_operando, segundo_operando);
-    break;
-  default:
-    break;
-  }
+  Str direita = l_desempilha(operandos);
+  Str esquerda = l_desempilha(operandos);
   s_destroi(operador);
-  s_destroi(s_operando);
-  s_destroi(p_operando);
-  if(erro != NULL){
-    return erro;
+  if(!verifica_início_de_identificador(s_ch(esquerda, 0))){
+    s_destroi(esquerda);
+    s_destroi(direita);
+    return define_erro("atribuicao a um nao nome");
   }
-  Str resultado = s_cria_número(resultado_operandos);
-  l_empilha(operandos, resultado);
+  Str valor;
+  if(verifica_início_de_identificador(s_ch(direita, 0))){
+    valor_t encontrado = dic_busca(variáveis, direita);
+    s_destroi(direita);
+    if(encontrado == VALOR_NÃO_EXISTE){
+      s_destroi(esquerda);
+      return define_erro("variavel nao definida");
+    }
+    valor = s_cria_cópia(encontrado);
+  } else {
+    valor = direita;
+  }
+  Str anterior = dic_insere(variáveis, esquerda, valor);
+  if(anterior != VALOR_NÃO_EXISTE){
+    s_destroi(anterior);
+    s_destroi(esquerda);
+  }
+  l_empilha(operandos, s_cria_cópia(valor));
   return NULL;
 }
 
-static void executa_acao(char acao, Lista operandos, Lista operadores, Str operador_e,
-                          int *i, bool *terminou, Str *resultado_erro)
+static Str acao_opera(Dicionário variáveis, Lista operadores, Lista operandos)
+{
+  if(l_tam(operandos) < 2){
+    return define_erro("operandos insuficientes");
+  }
+  if(s_ch(l_topo(operadores), 0) == '='){
+    return acao_atribui(variáveis, operadores, operandos);
+  }
+  Str operador = l_desempilha(operadores);
+  Str s_operando = l_desempilha(operandos);
+  Str p_operando = l_desempilha(operandos);
+  double segundo = 0;
+  double primeiro = 0;
+  bool ok_segundo = valor_operando(variáveis, s_operando, &segundo);
+  bool ok_primeiro = valor_operando(variáveis, p_operando, &primeiro);
+  unichar op = s_ch(operador, 0);
+  s_destroi(operador);
+  s_destroi(s_operando);
+  s_destroi(p_operando);
+  if(!ok_segundo || !ok_primeiro){
+    return define_erro("variavel nao definida");
+  }
+  double resultado;
+  if(!calcula(op, primeiro, segundo, &resultado)){
+    return define_erro("divisao por zero");
+  }
+  l_empilha(operandos, s_cria_número(resultado));
+  return NULL;
+}
+
+static void executa_acao(Dicionário variáveis, char acao, Lista operandos, Lista operadores,
+                          Str operador_e, int *i, bool *terminou, Str *resultado_erro)
 {
   if(acao == 'T'){
     *terminou = true;
@@ -178,7 +322,7 @@ static void executa_acao(char acao, Lista operandos, Lista operadores, Str opera
     acao_descarta(operadores);
     (*i)++;
   } else if(acao == 'O'){
-    Str erro = acao_opera(operadores, operandos);
+    Str erro = acao_opera(variáveis, operadores, operandos);
     if(erro != NULL){
       *resultado_erro = erro;
       *terminou = true;
@@ -209,7 +353,8 @@ static bool le_proximo(Lista tokens, int *i, Lista operandos,
   }
 }
 
-static Str monta_resultado(Lista tokens, Lista operandos, Lista operadores, Str resultado_erro)
+static Str monta_resultado(Dicionário variáveis, Lista tokens, Lista operandos,
+                           Lista operadores, Str resultado_erro)
 {
   Str resultado;
   if(resultado_erro != NULL){
@@ -217,7 +362,18 @@ static Str monta_resultado(Lista tokens, Lista operandos, Lista operadores, Str 
   } else if(l_tam(operandos) != 1) {
     resultado = define_erro("expressao invalida");
   } else {
-    resultado = l_desempilha(operandos);
+    Str operando = l_desempilha(operandos);
+    if(verifica_início_de_identificador(s_ch(operando, 0))){
+      valor_t encontrado = dic_busca(variáveis, operando);
+      if(encontrado == VALOR_NÃO_EXISTE){
+        resultado = define_erro("variavel nao definida");
+      } else {
+        resultado = s_cria_cópia(encontrado);
+      }
+      s_destroi(operando);
+    } else {
+      resultado = operando;
+    }
   }
   l_destroi(tokens);
   l_destroi(operandos);
@@ -227,13 +383,14 @@ static Str monta_resultado(Lista tokens, Lista operandos, Lista operadores, Str 
 
 // Calcula o valor de expressão e retorna uma nova Str contendo o resultado.
 // Em cado de erro, os primeiros caracteres da Str de retorno são "#ERRO ".
-Str calculadora(Str expressão)
+static Str calcula_expressao(Calc c, Str expressão)
 {
-  Lista tokens = tokeniza(expressão); 
+  Dicionário variáveis = c->variáveis;
+  Lista tokens = tokeniza(expressão);
   Lista operandos = l_cria();
   Lista operadores = l_cria();
   bool terminou = false;
-  Str resultado_erro = NULL;  // fica NULL se não houver erro
+  Str resultado_erro = NULL;
   int i = 0;
   while(!terminou){
     Str operador_p = obtem_p(operadores);
@@ -247,57 +404,12 @@ Str calculadora(Str expressão)
         terminou = true;
       } else {
         char acao = tabela[cat_p][cat_e];
-        executa_acao(acao, operandos, operadores, operador_e, &i, &terminou, &resultado_erro);
+        executa_acao(variáveis, acao, operandos, operadores, operador_e, &i, &terminou, &resultado_erro);
       }
     }
   }
-  Str resultado = monta_resultado(tokens, operandos, operadores, resultado_erro);
+  Str resultado = monta_resultado(variáveis, tokens, operandos, operadores, resultado_erro);
   return resultado;
-}
-
-// Retorna uma nova Lista contendo substrings de txt.
-// Uma substring inicia em um caractere diferente de espaço, tabulação,
-//   fim de linha.
-// Se a substring inicia por um dígito ou um ponto, contém os demais dígitos
-//   ou pontos que seguem.
-// Se a substring inicia por uma letra ou sublinhado ou `$`, contém os
-//   demais letras, sublinhados, `$` ou dígitos que seguem.
-// Se a substring inicia por outro caractere, contém somente esse caractere.
-// Exemplos:
-// " 9. 5" -> ["9." "5"]
-// "92+a ba 3b3 ** *  " -> ["92" "+" "a" "ba" "3" "b3" "*" "*" "*"]
-
-static bool verifica_espaço(unichar c)
-{
-  return c == ' ' || c == '\t' || c == '\n';
-}
-
-static int pula_espacos(Str txt, int pos)
-{
-  while (verifica_espaço(s_ch(txt, pos))) {
-    pos++;
-  }
-  return pos;
-}
-
-static bool verifica_dígito_ou_ponto(unichar c)
-{
-  return c == '.' || (c >= '0' && c <= '9');
-}
-
-static bool verifica_início_de_identificador(unichar c)
-{
-  return c == '$' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-static bool verifica_continuação_de_identificador(unichar c)
-{
-  return verifica_início_de_identificador(c) || c == '_' || (c >= '0' && c <= '9');
-}
-
-static bool verificar_operador(unichar c)
-{
-  return c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '(' || c == ')' || c == '=';
 }
 
 static int acha_fim_token(Str txt, int inicio)
@@ -321,6 +433,25 @@ static int acha_fim_token(Str txt, int inicio)
     return pos;
   }
   return -1;
+}
+
+static Calc calc_global = NULL;
+
+static void destroi_calc_global(void)
+{
+  if(calc_global != NULL){
+    calc_destroi(calc_global);
+    calc_global = NULL;
+  }
+}
+
+Str calculadora(Str expressão)
+{
+  if(calc_global == NULL){
+    calc_global = calc_cria();
+    atexit(destroi_calc_global);
+  }
+  return calcula_expressao(calc_global, expressão);
 }
 
 Lista tokeniza(Str txt)
