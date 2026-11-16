@@ -184,27 +184,73 @@ int g_num_nós(Grafo self){
 
 // Arestas
 
+static aresta *acha_aresta(Grafo self, int origem, int destino){
+    aresta *a = self->nos[origem].saidas;
+    while(a != NULL && a->destino != destino){
+        a = a->prox_saida;
+    }
+    return a;
+}
+
 // altera o valor da aresta que interliga o nó origem ao nó destino
 //   (copia de *p_dado para uma memória gerenciada pelo grafo)
 // caso a aresta não exista, deve ser criada
 // caso p_dado seja NULL, a aresta deve ser removida
-void g_altera_valor_da_aresta(Grafo self, int nó_origem, int nó_destino,
-                              void *p_dado);
+void g_altera_valor_da_aresta(Grafo self, int nó_origem, int nó_destino, void *p_dado){
+    assert(nó_origem >= 0 && nó_origem < self->qtd_no);
+    assert(nó_destino >= 0 && nó_destino < self->qtd_no);
+    if(p_dado == NULL){
+        remove_aresta(self, nó_origem, nó_destino);
+        return;
+    }
+    aresta *a = acha_aresta(self, nó_origem, nó_destino);
+    if(a != NULL){
+        memcpy(a->valor, p_dado, self->tam_aresta);
+    } else {
+        a = malloc(sizeof(*a));
+        assert(a != NULL);
+        a->valor = malloc(self->tam_aresta);
+        assert(a->valor != NULL);
+        memcpy(a->valor, p_dado, self->tam_aresta);
+        a->origem = nó_origem;
+        a->destino = nó_destino;
+        a->prox_saida = self->nos[nó_origem].saidas;
+        self->nos[nó_origem].saidas = a;
+        a->prox_entrada = self->nos[nó_destino].entradas;
+        self->nos[nó_destino].entradas = a;
+    }
+}
 
 // retorna um ponteiro para o valor associado à aresta entre nó_origem e
 //   nó_destino, localizado em memória gerenciada pelo grafo.
 // retorna NULL se tal aresta não existir
-void *g_valor_da_aresta(Grafo self, int nó_origem, int nó_destino);
+void *g_valor_da_aresta(Grafo self, int nó_origem, int nó_destino){
+    assert(nó_origem >= 0 && nó_origem < self->qtd_no);
+    assert(nó_destino >= 0 && nó_destino < self->qtd_no);
+    aresta *a = acha_aresta(self, nó_origem, nó_destino);
+    if(a == NULL){
+        return NULL;
+    }
+    return a->valor;
+}
 
 // inicia uma consulta a arestas que partem do nó origem
 // as próximas chamadas a 'g_próxima_aresta' devem retornar os valores
 //   correspondentes a cada aresta que parte desse nó
-void g_arestas_que_partem(Grafo self, int nó_origem);
+void g_arestas_que_partem(Grafo self, int nó_origem){
+    assert(nó_origem >= 0 && nó_origem < self->qtd_no);
+    self->consulta_saida = true;
+    self->corrente = self->nos[nó_origem].saidas;
+}
 
 // inicia uma consulta a arestas que chegam ao nó destino
 // as próximas chamadas a 'g_próxima_aresta' devem retornar os valores
 //   correspondentes a cada aresta que chega nesse nó
-void g_arestas_que_chegam(Grafo self, int nó_destino);
+void g_arestas_que_chegam(Grafo self, int nó_destino){
+    assert(nó_destino >= 0 && nó_destino < self->qtd_no);
+    self->consulta_saida = false;
+    self->corrente = self->nos[nó_destino].entradas;
+}
 
 // retorna um ponteiro para o dado associado à próxima aresta, de acordo
 //   com a última consulta iniciada por 'g_arestas_que_partem' ou
@@ -212,16 +258,72 @@ void g_arestas_que_chegam(Grafo self, int nó_destino);
 // o valor do nó vizinho ao nó da consulta deve ser colocado em '*p_nó_vizinho'
 //   (se não for NULL)
 // caso não exista mais aresta que satisfaça a consulta, retorna NULL.
-void *g_próxima_aresta(Grafo self, int *p_nó_vizinho);
+void *g_próxima_aresta(Grafo self, int *p_nó_vizinho){
+    if(self->corrente == NULL){
+        return NULL;
+    }
+    aresta *a = self->corrente;
+    if(p_nó_vizinho != NULL){
+        if(self->consulta_saida == true){
+            *p_nó_vizinho = a->destino;
+        } else {
+            *p_nó_vizinho = a->origem;
+        }
+    }
+    if(self->consulta_saida == true){
+        self->corrente = a->prox_saida;
+    } else {
+        self->corrente = a->prox_entrada;
+    }
+    return a->valor;
+}
 
 // Algoritmos
 
 // retorna true se grafo é cíclico, false caso contrário
-bool g_tem_ciclo(Grafo self);
+bool g_tem_ciclo(Grafo self){
+    Fila ordem = g_ordem_topológica(self);
+    bool ciclo = self->qtd_no > 0 && f_tá_vazia(ordem);
+    f_destrói(ordem);
+    return ciclo;
+}
 
 // retorna uma fila de inteiros contendo os números dos nós do grafo em
 //   uma ordem em que, se o nó 'a' antecede 'b', não existe uma aresta
 //   de 'b' para 'a' no grafo
 // deve retornar uma fila vazia caso tal ordem não exista
 // quem chama esta função é responsável por destruir a fila.
-Fila g_ordem_topológica(Grafo self);
+Fila g_ordem_topológica(Grafo self){
+    int n = self->qtd_no;
+    int *grau = malloc(sizeof(*grau) * (n + 1));
+    assert(grau != NULL);
+    for(int i = 0; i < n; i++){
+        grau[i] = 0;
+        for(aresta *a = self->nos[i].entradas; a != NULL; a = a->prox_entrada){
+            grau[i]++;
+        }
+    }
+    Fila pendentes = f_cria(sizeof(int));
+    Fila ordem = f_cria(sizeof(int));
+    for(int i = 0; i < n; i++){
+        if(grau[i] == 0) f_insere(pendentes, &i);
+    }
+    int processados = 0;
+    while(!f_tá_vazia(pendentes)){
+        int atual;
+        f_remove(pendentes, &atual);
+        f_insere(ordem, &atual);
+        processados++;
+        for(aresta *a = self->nos[atual].saidas; a != NULL; a = a->prox_saida){
+            grau[a->destino]--;
+            if(grau[a->destino] == 0) f_insere(pendentes, &a->destino);
+        }
+    }
+    if(processados < n){
+        f_destrói(ordem);
+        ordem = f_cria(sizeof(int));
+    }
+    free(grau);
+    f_destrói(pendentes);
+    return ordem;
+}
