@@ -15,11 +15,11 @@
 - implementação alternativa: guardar os indivíduos só dentro das espécies. A geração guarda apenas as espécies.  
 - por que melhora: cada indivíduo tem um único dono, com um só lugar para inserir e liberar.
 
-**geracao.c (qsort repetido)**
+**geracao.c (ordenações repetidas)**
 
-- problema: a cada geração, os mesmos vetores são ordenados por completo várias vezes.  
-- motivo: em vários pontos só se quer saber o melhor elemento (para gravar, imprimir e entregar as sobras), e ordenar tudo é trabalho a mais.  
-- implementação alternativa: para achar só o melhor, uma passada pelo vetor guardando o maior (ou uma fila de prioridade). Onde a ordem completa é necessária, ordenar uma vez só por geração.  
+- problema: a cada geração, as mesmas listas são ordenadas por completo várias vezes.
+- motivo: em vários pontos só se quer saber o melhor (para gravar, imprimir e entregar as sobras), e ordenar tudo é trabalho a mais. A ordem completa só é necessária dentro de cada espécie.
+- implementação alternativa: para achar só o melhor, uma passada pela lista guardando o maior (ou uma fila de prioridade). Ordenar por completo só dentro de cada espécie, uma vez por geração.
 - por que melhora: acha o melhor sem ordenar tudo, e as ordenações repetidas deixam de ser feitas.
 
 **individuo.c (tabela de inovações)**
@@ -61,7 +61,7 @@
 **alteração em grafo.h**  
 **Percorrer todas as arestas de uma vez**
 
-- problema: hoje o grafo só mostra as arestas de um nó por vez. Para visitar todas as sinapses, o treinador precisa de dois laços, um pelos neurônios e outro pelas sinapses de cada um. Isso se repete em compatibilidade, indivíduo\_mistura\_sinapses, indivíduo\_grava e mutação\_altera\_valor\_sinapses.  
+- problema: o grafo só mostra as arestas de um nó por vez. Para visitar todas as sinapses, o treinador precisa de dois laços, um pelos neurônios e outro pelas sinapses de cada um. Isso se repete em compatibilidade, indivíduo\_mistura\_sinapses, indivíduo\_grava e mutação\_altera\_valor\_sinapses.  
 - sugestão: uma consulta que entregue, uma a uma, todas as arestas do grafo, com origem, destino e valor.  
 - por que ajuda: cada uma dessas funções fica com um laço só.
 
