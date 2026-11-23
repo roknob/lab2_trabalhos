@@ -18,8 +18,8 @@
 **geracao.c (ordenações repetidas)**
 
 - problema: a cada geração, as mesmas listas são ordenadas por completo várias vezes.
-- motivo: em vários pontos só se quer saber o melhor (para gravar, imprimir e entregar as sobras), e ordenar tudo é trabalho a mais. A ordem completa só é necessária dentro de cada espécie.
-- implementação alternativa: para achar só o melhor, uma passada pela lista guardando o maior (ou uma fila de prioridade). Ordenar por completo só dentro de cada espécie, uma vez por geração.
+- motivo: em vários pontos só se quer saber o melhor (para gravar, imprimir e entregar as sobras), e ordenar tudo é trabalho a mais. A ordem completa só é necessária dentro de cada espécie e na lista de espécies (usada para sortear as espécies melhores com mais chance e para pegar as duas melhores).
+- implementação alternativa: para achar só o melhor, uma passada pela lista guardando o maior (ou uma fila de prioridade). Ordenar por completo só dentro de cada espécie e a lista de espécies, uma vez por geração cada.
 - por que melhora: acha o melhor sem ordenar tudo, e as ordenações repetidas deixam de ser feitas.
 
 **individuo.c (tabela de inovações)**
@@ -74,5 +74,5 @@
 **Perguntar se existe caminho entre dois nós**
 
 - problema: rede\_insere\_sinapse insere a sinapse e depois verifica o grafo inteiro para ver se formou ciclo. Se formou, apaga o que acabou de inserir.  
-- sugestão: g\_existe\_caminho(origem, destino). Uma sinapse de A para B só forma ciclo se já houver caminho de B para A.  
+- sugestão: g\_existe\_caminho(origem, destino), que deve devolver verdadeiro também quando origem e destino são o mesmo nó. Uma sinapse de A para B só forma ciclo se já houver caminho de B para A (ou se A e B forem o mesmo nó).  
 - por que ajuda: a verificação acontece antes de inserir e olha só a parte da rede que importa, sem inserir e desfazer.
