@@ -1,5 +1,15 @@
 avaliação final - lab2/2026
 
-Com a finalização da cadeira, minha autoavaliação em relação ao meu aprendizado durante o semestre foi de que consegui realizar o que foi proposto para os trabalhos, sendo necessário alguns ajustes no t2 e no t3 conforme comentários do monitor, os quais me permitiram corrigir erros mas principalmente otimizar o código, fazendo funções static para serem reutilizadas e sem repetir códigos. Desse modo, todos os programas funcionam, sendo que foram essenciais para fixar os conteúdos aprendidos.
-Quanto aos conteúdos, sinto que assimilei bem todos eles, tendo tido um pouco mais de dificuldade em árvores e grafos, mas também tenho consciência de que cabia a mim realizar mais exercícios para fixar melhor esses conteúdos, o que, por conta das demandas das outras cadeiras, não consegui fazer. Ainda assim, consegui compreender, principalmente nas aplicações dos trabalhos. Então, considero meu desenvolvimento na cadeira satisfatório, tendo compreendido os conteúdos propostos, realizados os trabalhos e corrigindo-os.
+Com a finalização da cadeira, minha autoavaliação em relação ao meu aprendizado durante o semestre foi de 
+que consegui realizar o que foi proposto para os trabalhos, sendo necessário alguns ajustes no t2 e no t3 
+conforme comentários do monitor, os quais me permitiram corrigir erros mas principalmente otimizar o código, 
+fazendo funções static para serem reutilizadas e sem repetir códigos. Desse modo, todos os programas funcionam, 
+sendo que foram essenciais para fixar os conteúdos aprendidos.
+
+Quanto aos conteúdos, sinto que assimilei bem todos eles, tendo tido um pouco mais de dificuldade em árvores 
+e grafos, mas também tenho consciência de que cabia a mim realizar mais exercícios para fixar melhor esses 
+conteúdos, o que, por conta das demandas das outras cadeiras, não consegui fazer. Ainda assim, consegui 
+compreender, principalmente nas aplicações dos trabalhos. Então, considero meu desenvolvimento na cadeira 
+satisfatório, tendo compreendido os conteúdos propostos, realizados os trabalhos e corrigindo-os.
+
 Portanto, me avalio com 8.
